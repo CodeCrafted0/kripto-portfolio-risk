@@ -140,6 +140,7 @@ async function updatePriceCharts() {
         }
     } catch (error) {
         console.error('Fiyat güncelleme hatası:', error);
+        // Sessiz hata - kullanıcıyı spam etme
     }
 }
 

@@ -1,5 +1,15 @@
 // Ana JavaScript dosyası - API çağrıları ve UI işlemleri
 
+// Helper function for notifications (fallback to alert if notifications not available)
+function showNotification(message, type = 'info') {
+    if (typeof notifications !== 'undefined' && notifications) {
+        notifications[type](message);
+    } else {
+        // Fallback to alert for backward compatibility
+        alert(message);
+    }
+}
+
 // Portföy Analizi
 let portfolioItems = 1;
 
@@ -60,12 +70,13 @@ async function analyzePortfolio() {
     }
     
     if (portfolio.length === 0) {
-        alert('Lütfen en az bir coin girin!');
+        showNotification('Lütfen en az bir coin girin!', 'warning');
         return;
     }
     
     const resultsDiv = document.getElementById('portfolio-results');
-    resultsDiv.innerHTML = '<div class="loading"><div class="spinner-border" role="status"></div><p>Analiz yapılıyor...</p></div>';
+    resultsDiv.innerHTML = '<div class="loading"><div class="spinner-border text-primary" role="status"></div><p>Analiz yapılıyor...</p></div>';
+    resultsDiv.querySelector('.loading').style.display = 'flex';
     
     try {
         const response = await fetch('/api/analyze', {
@@ -78,11 +89,14 @@ async function analyzePortfolio() {
         
         if (data.success) {
             displayPortfolioResults(data.data);
+            showNotification('Portföy analizi tamamlandı!', 'success');
         } else {
             resultsDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+            showNotification(data.error || 'Analiz sırasında bir hata oluştu', 'error');
         }
     } catch (error) {
         resultsDiv.innerHTML = `<div class="alert alert-danger">Hata: ${error.message}</div>`;
+        showNotification('Bağlantı hatası: ' + error.message, 'error');
     }
 }
 
@@ -738,9 +752,11 @@ async function connectBybit() {
             
             errorHtml += '</div>';
             statusDiv.innerHTML = errorHtml;
+            showNotification(data.error, 'error');
         }
     } catch (error) {
         statusDiv.innerHTML = '<div class="alert alert-danger">Hata: ' + error.message + '</div>';
+        showNotification('Bağlantı hatası: ' + error.message, 'error');
     }
 }
 
