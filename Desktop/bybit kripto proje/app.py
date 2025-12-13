@@ -366,7 +366,12 @@ def bybit_status():
 
 # Database tablolarını oluştur
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+        print("✅ Database tabloları başarıyla oluşturuldu/doğrulandı")
+    except Exception as e:
+        print(f"⚠️ Database tablo oluşturma hatası (devam ediliyor): {str(e)}")
+        # Production'da database olmayabilir, uygulama çalışmaya devam eder
 
 if __name__ == '__main__':
     # Production'da gunicorn kullanılır, bu sadece development için
