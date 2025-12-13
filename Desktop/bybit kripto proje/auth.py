@@ -66,21 +66,17 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        # Email doğrulama email'ini arka planda gönder (timeout önlemek için)
-        def send_email_async():
-            try:
-                with _app.app_context():
-                    EmailService.send_verification_email(user)
-            except Exception as e:
-                print(f"Email gönderme hatası (arka plan): {e}")
+        # Email doğrulama email'ini gönder
+        try:
+            email_sent = EmailService.send_verification_email(user)
+            if email_sent:
+                flash('Kayıt başarılı! Email adresinize doğrulama linki gönderildi. Lütfen email\'inizi kontrol edin ve linke tıklayın.', 'success')
+            else:
+                flash('Kayıt başarılı! Ancak doğrulama email\'i gönderilemedi. Lütfen email doğrulama sayfasından tekrar göndermeyi deneyin.', 'warning')
+        except Exception as e:
+            print(f"Email gönderme hatası: {str(e)}")
+            flash('Kayıt başarılı! Ancak doğrulama email\'i gönderilemedi. Lütfen email doğrulama sayfasından tekrar göndermeyi deneyin.', 'warning')
         
-        # Thread başlat - email gönderimi arka planda yapılacak
-        email_thread = threading.Thread(target=send_email_async)
-        email_thread.daemon = True
-        email_thread.start()
-        
-        # Hemen response döndür (timeout önlemek için)
-        flash('Kayıt başarılı! Lütfen email adresinize gelen doğrulama linkine tıklayın. Email\'inizi doğrulamadan giriş yapamazsınız.', 'success')
         return redirect(url_for('auth.email_verification_required'))
     
     return render_template('auth/register.html')

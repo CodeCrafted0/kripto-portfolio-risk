@@ -88,16 +88,29 @@ class EmailService:
                 subject=subject,
                 recipients=recipients,
                 html=html_body,
-                body=text_body
+                body=text_body,
+                sender=current_app.config.get('MAIL_DEFAULT_SENDER')
             )
             
             # Mail extension'ını app context'ten al
             from extensions import mail
-            mail.send(msg)
-            return True
+            
+            # Email göndermeyi dene
+            try:
+                mail.send(msg)
+                print(f"Email başarıyla gönderildi: {user.email}")
+                return True
+            except Exception as send_error:
+                print(f"Email gönderme hatası (mail.send): {str(send_error)}")
+                print(f"MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}")
+                print(f"MAIL_USERNAME: {current_app.config.get('MAIL_USERNAME')}")
+                print(f"MAIL_PASSWORD ayarlı mı: {bool(current_app.config.get('MAIL_PASSWORD'))}")
+                return False
             
         except Exception as e:
-            print(f"Email gönderme hatası: {str(e)}")
+            print(f"Email gönderme hatası (genel): {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False
     
     @staticmethod
