@@ -65,14 +65,14 @@ def register():
         # Email doğrulama email'i gönder
         try:
             EmailService.send_verification_email(user)
-            flash('Kayıt başarılı! Lütfen email adresinize gelen doğrulama linkine tıklayın.', 'success')
+            flash('Kayıt başarılı! Lütfen email adresinize gelen doğrulama linkine tıklayın. Email\'inizi doğrulamadan giriş yapamazsınız.', 'success')
+            # Email doğrulama ZORUNLU - giriş yapmadan email doğrulama sayfasına yönlendir
+            return redirect(url_for('auth.email_verification_required'))
         except Exception as e:
             print(f"Email gönderme hatası: {e}")
-            flash('Kayıt başarılı! Ancak doğrulama email\'i gönderilemedi. Lütfen daha sonra tekrar deneyin.', 'warning')
-        
-        # Email doğrulama olmadan da giriş yapabilir (geçici)
-        login_user(user)
-        return redirect(url_for('index'))
+            flash('Kayıt başarılı! Ancak doğrulama email\'i gönderilemedi. Lütfen daha sonra tekrar deneyin veya destek ekibimizle iletişime geçin.', 'warning')
+            # Email gönderilemese bile kullanıcıya bilgi ver
+            return redirect(url_for('auth.email_verification_required'))
     
     return render_template('auth/register.html')
 
@@ -113,6 +113,11 @@ def login():
                 if not user.is_active:
                     flash('Hesabınız deaktif edilmiş', 'error')
                     return render_template('auth/login.html')
+                
+                # Email doğrulama ZORUNLU - doğrulanmamışsa giriş yapamaz
+                if not user.email_verified:
+                    flash('Email adresinizi doğrulamanız gerekiyor. Lütfen email adresinize gelen doğrulama linkine tıklayın.', 'warning')
+                    return redirect(url_for('auth.email_verification_required'))
                 
                 login_user(user, remember=True)  # Remember me özelliği
                 user.last_login = datetime.utcnow()  # Son giriş zamanını güncelle
@@ -166,21 +171,38 @@ def verify_email(token):
     return redirect(url_for('auth.login'))
 
 
+@auth_bp.route('/email-verification-required')
+def email_verification_required():
+    """Email doğrulama gerektiği sayfası"""
+    return render_template('auth/email_verification_required.html')
+
+
 @auth_bp.route('/resend-verification', methods=['POST'])
-@login_required
 def resend_verification():
     """Doğrulama email'ini tekrar gönder"""
-    if current_user.email_verified:
-        flash('Email adresiniz zaten doğrulanmış', 'info')
-        return redirect(url_for('auth.profile'))
+    email = request.form.get('email', '').strip().lower()
+    
+    if not email:
+        flash('Email adresi gereklidir', 'error')
+        return redirect(url_for('auth.email_verification_required'))
+    
+    user = User.query.filter_by(email=email).first()
+    
+    if not user:
+        flash('Bu email adresi ile kayıtlı kullanıcı bulunamadı', 'error')
+        return redirect(url_for('auth.email_verification_required'))
+    
+    if user.email_verified:
+        flash('Email adresiniz zaten doğrulanmış. Giriş yapabilirsiniz.', 'success')
+        return redirect(url_for('auth.login'))
     
     try:
-        EmailService.send_verification_email(current_user)
+        EmailService.send_verification_email(user)
         flash('Doğrulama email\'i tekrar gönderildi. Lütfen email adresinizi kontrol edin.', 'success')
     except Exception as e:
         flash('Email gönderilemedi. Lütfen daha sonra tekrar deneyin.', 'error')
     
-    return redirect(url_for('auth.profile'))
+    return redirect(url_for('auth.email_verification_required'))
 
 
 @auth_bp.route('/api/user-info')
