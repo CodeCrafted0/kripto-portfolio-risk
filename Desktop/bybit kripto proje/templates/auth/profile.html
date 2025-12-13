@@ -51,6 +51,21 @@
                 {% endif %}
                 <div class="row mb-3">
                     <div class="col-md-4 fw-bold">
+                        <i class="bi bi-envelope-check"></i> Email Durumu:
+                    </div>
+                    <div class="col-md-8">
+                        {% if user.email_verified %}
+                            <span class="badge bg-success">Doğrulandı</span>
+                        {% else %}
+                            <span class="badge bg-warning">Doğrulanmadı</span>
+                            <form method="POST" action="{{ url_for('auth.resend_verification') }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-primary ms-2">Doğrulama Email'i Gönder</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">
                         <i class="bi bi-star"></i> Plan:
                     </div>
                     <div class="col-md-8">
@@ -123,9 +138,9 @@
                     <div class="mt-3">
                         <h6>Ücretsiz Plan Özellikleri:</h6>
                         <ul>
-                            <li>Günde 50 portföy analizi</li>
-                            <li>Günde 50 kaldıraç analizi</li>
-                            <li>Günde 50 pozisyon boyutu hesaplama</li>
+                            <li>Günde 5 portföy analizi</li>
+                            <li>Günde 5 kaldıraç analizi</li>
+                            <li>Günde 5 pozisyon boyutu hesaplama</li>
                             <li>Temel risk analizi</li>
                             <li>Limitli Bybit entegrasyonu</li>
                         </ul>

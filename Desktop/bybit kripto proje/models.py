@@ -35,6 +35,11 @@ class User(UserMixin, db.Model):
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     stripe_subscription_id = db.Column(db.String(255), nullable=True)
     
+    # Email doğrulama
+    email_verified = db.Column(db.Boolean, default=False)
+    email_verification_token = db.Column(db.String(100), nullable=True, unique=True)
+    email_verification_sent_at = db.Column(db.DateTime, nullable=True)
+    
     # Kullanım istatistikleri
     total_analyses = db.Column(db.Integer, default=0)
     daily_analyses = db.Column(db.Integer, default=0)
@@ -53,13 +58,13 @@ class User(UserMixin, db.Model):
             allowed_features = ['portfolio_analysis', 'leverage_analysis', 'position_sizing']
             return feature_name in allowed_features
         else:  # FREE
-            # Free plan limitleri - daha cömert limitler
+            # Free plan limitleri - profesyonel limitler
             if feature_name == 'portfolio_analysis':
-                return self.daily_analyses < 50  # Günde 50 analiz (artırıldı)
+                return self.daily_analyses < 5  # Günde 5 analiz
             elif feature_name == 'leverage_analysis':
-                return self.daily_analyses < 50  # Günde 50 analiz
+                return self.daily_analyses < 5  # Günde 5 analiz
             elif feature_name == 'position_sizing':
-                return self.daily_analyses < 50  # Günde 50 analiz
+                return self.daily_analyses < 5  # Günde 5 analiz
             return False
     
     def reset_daily_usage(self):

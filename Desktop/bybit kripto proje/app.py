@@ -11,6 +11,7 @@ import secrets
 from dotenv import load_dotenv
 from models import db, User
 from auth import init_auth
+from extensions import mail
 from services.bybit_service import BybitService
 from services.risk_analyzer import RiskAnalyzer
 from services.portfolio_manager import PortfolioManager
@@ -37,8 +38,18 @@ else:
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Email configuration
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USE_SSL'] = os.getenv('MAIL_USE_SSL', 'False').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', '')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', '')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@kriptorisk.com')
+
 # Initialize extensions
 db.init_app(app)
+mail.init_app(app)
 CORS(app)
 
 # Flask-Login setup

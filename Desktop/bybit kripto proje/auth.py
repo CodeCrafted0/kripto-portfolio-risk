@@ -6,6 +6,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_bcrypt import Bcrypt
 from models import db, User, SubscriptionPlan
+from services.email_service import EmailService
 from datetime import datetime, timedelta
 import re
 
@@ -54,15 +55,23 @@ def register():
             email=email,
             password_hash=password_hash,
             name=name or None,
-            subscription_plan=SubscriptionPlan.FREE
+            subscription_plan=SubscriptionPlan.FREE,
+            email_verified=False
         )
         
         db.session.add(user)
         db.session.commit()
         
-        # Otomatik giriş yap
+        # Email doğrulama email'i gönder
+        try:
+            EmailService.send_verification_email(user)
+            flash('Kayıt başarılı! Lütfen email adresinize gelen doğrulama linkine tıklayın.', 'success')
+        except Exception as e:
+            print(f"Email gönderme hatası: {e}")
+            flash('Kayıt başarılı! Ancak doğrulama email\'i gönderilemedi. Lütfen daha sonra tekrar deneyin.', 'warning')
+        
+        # Email doğrulama olmadan da giriş yapabilir (geçici)
         login_user(user)
-        flash('Kayıt başarılı! Hoş geldiniz!', 'success')
         return redirect(url_for('index'))
     
     return render_template('auth/register.html')
@@ -139,6 +148,41 @@ def profile():
     return render_template('auth/profile.html', user=current_user)
 
 
+@auth_bp.route('/verify-email/<token>')
+def verify_email(token):
+    """Email doğrulama"""
+    user, error = EmailService.verify_token(token)
+    
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('auth.login'))
+    
+    if user:
+        flash('Email adresiniz başarıyla doğrulandı!', 'success')
+        login_user(user)
+        return redirect(url_for('index'))
+    
+    flash('Geçersiz doğrulama linki', 'error')
+    return redirect(url_for('auth.login'))
+
+
+@auth_bp.route('/resend-verification', methods=['POST'])
+@login_required
+def resend_verification():
+    """Doğrulama email'ini tekrar gönder"""
+    if current_user.email_verified:
+        flash('Email adresiniz zaten doğrulanmış', 'info')
+        return redirect(url_for('auth.profile'))
+    
+    try:
+        EmailService.send_verification_email(current_user)
+        flash('Doğrulama email\'i tekrar gönderildi. Lütfen email adresinizi kontrol edin.', 'success')
+    except Exception as e:
+        flash('Email gönderilemedi. Lütfen daha sonra tekrar deneyin.', 'error')
+    
+    return redirect(url_for('auth.profile'))
+
+
 @auth_bp.route('/api/user-info')
 @login_required
 def user_info():
@@ -149,6 +193,7 @@ def user_info():
             'email': current_user.email,
             'name': current_user.name,
             'plan': current_user.subscription_plan.value,
+            'email_verified': current_user.email_verified,
             'daily_analyses': current_user.daily_analyses,
             'total_analyses': current_user.total_analyses,
             'can_analyze': current_user.can_use_feature('portfolio_analysis')
