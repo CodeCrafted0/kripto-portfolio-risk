@@ -2,20 +2,24 @@
 Authentication ve Authorization Modülü
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_bcrypt import Bcrypt
 from models import db, User, SubscriptionPlan
 from services.email_service import EmailService
 from datetime import datetime, timedelta
 import re
+import threading
 
 auth_bp = Blueprint('auth', __name__)
 bcrypt = Bcrypt()
+_app = None  # Flask app instance'ını sakla
 
 
 def init_auth(app):
     """Authentication'ı Flask app'e bağla"""
+    global _app
+    _app = app
     bcrypt.init_app(app)
     app.register_blueprint(auth_bp)
 
@@ -62,17 +66,22 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        # Email doğrulama email'i gönder
-        try:
-            EmailService.send_verification_email(user)
-            flash('Kayıt başarılı! Lütfen email adresinize gelen doğrulama linkine tıklayın. Email\'inizi doğrulamadan giriş yapamazsınız.', 'success')
-            # Email doğrulama ZORUNLU - giriş yapmadan email doğrulama sayfasına yönlendir
-            return redirect(url_for('auth.email_verification_required'))
-        except Exception as e:
-            print(f"Email gönderme hatası: {e}")
-            flash('Kayıt başarılı! Ancak doğrulama email\'i gönderilemedi. Lütfen daha sonra tekrar deneyin veya destek ekibimizle iletişime geçin.', 'warning')
-            # Email gönderilemese bile kullanıcıya bilgi ver
-            return redirect(url_for('auth.email_verification_required'))
+        # Email doğrulama email'ini arka planda gönder (timeout önlemek için)
+        def send_email_async():
+            try:
+                with _app.app_context():
+                    EmailService.send_verification_email(user)
+            except Exception as e:
+                print(f"Email gönderme hatası (arka plan): {e}")
+        
+        # Thread başlat - email gönderimi arka planda yapılacak
+        email_thread = threading.Thread(target=send_email_async)
+        email_thread.daemon = True
+        email_thread.start()
+        
+        # Hemen response döndür (timeout önlemek için)
+        flash('Kayıt başarılı! Lütfen email adresinize gelen doğrulama linkine tıklayın. Email\'inizi doğrulamadan giriş yapamazsınız.', 'success')
+        return redirect(url_for('auth.email_verification_required'))
     
     return render_template('auth/register.html')
 
