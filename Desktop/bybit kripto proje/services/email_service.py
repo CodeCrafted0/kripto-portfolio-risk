@@ -2,12 +2,17 @@
 Email Service - Profesyonel email gönderme servisi
 """
 
-from flask import url_for
+from flask import url_for, current_app
 from flask_mail import Message
-from extensions import mail
 import secrets
 from datetime import datetime, timedelta
 from models import db, User
+
+
+def get_mail():
+    """Mail extension'ını al"""
+    from extensions import mail
+    return mail
 
 
 class EmailService:
@@ -92,6 +97,7 @@ class EmailService:
                 body=text_body
             )
             
+            mail = get_mail()
             mail.send(msg)
             return True
             
