@@ -88,14 +88,24 @@ def login():
             flash('Email veya şifre hatalı', 'error')
             return render_template('auth/login.html')
         
+        # Şifre hash kontrolü
+        if not user.password_hash:
+            flash('Hesap hatası. Lütfen şifrenizi sıfırlayın.', 'error')
+            return render_template('auth/login.html')
+        
         # Şifre kontrolü - daha güvenli
         try:
-            if bcrypt.check_password_hash(user.password_hash, password):
+            # password_hash string olmalı, eğer bytes ise decode et
+            password_hash = user.password_hash
+            if isinstance(password_hash, bytes):
+                password_hash = password_hash.decode('utf-8')
+            
+            if bcrypt.check_password_hash(password_hash, password):
                 if not user.is_active:
                     flash('Hesabınız deaktif edilmiş', 'error')
                     return render_template('auth/login.html')
                 
-                login_user(user)
+                login_user(user, remember=True)  # Remember me özelliği
                 user.last_login = datetime.utcnow()  # Son giriş zamanını güncelle
                 db.session.commit()
                 flash('Giriş başarılı! Hoş geldiniz!', 'success')
@@ -106,7 +116,8 @@ def login():
             else:
                 flash('Email veya şifre hatalı', 'error')
         except Exception as e:
-            # Şifre hash sorunu olabilir - yeni hash ile deneyelim
+            # Hata loglama (production'da logger kullanılmalı)
+            print(f"Login error: {str(e)}")
             flash('Giriş hatası oluştu. Lütfen tekrar deneyin.', 'error')
     
     return render_template('auth/login.html')

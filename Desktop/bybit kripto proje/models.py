@@ -53,9 +53,13 @@ class User(UserMixin, db.Model):
             allowed_features = ['portfolio_analysis', 'leverage_analysis', 'position_sizing']
             return feature_name in allowed_features
         else:  # FREE
-            # Free plan limitleri
+            # Free plan limitleri - daha cömert limitler
             if feature_name == 'portfolio_analysis':
-                return self.daily_analyses < 10  # Günde 10 analiz
+                return self.daily_analyses < 50  # Günde 50 analiz (artırıldı)
+            elif feature_name == 'leverage_analysis':
+                return self.daily_analyses < 50  # Günde 50 analiz
+            elif feature_name == 'position_sizing':
+                return self.daily_analyses < 50  # Günde 50 analiz
             return False
     
     def reset_daily_usage(self):
