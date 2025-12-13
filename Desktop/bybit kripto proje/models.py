@@ -81,7 +81,7 @@ class UsageLog(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     feature_name = db.Column(db.String(50), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    metadata = db.Column(db.JSON, nullable=True)  # Ek bilgiler (coin sayısı, vs.)
+    extra_data = db.Column(db.JSON, nullable=True)  # Ek bilgiler (coin sayısı, vs.) - metadata reserved word olduğu için extra_data kullanıldı
     
     user = db.relationship('User', backref=db.backref('usage_logs', lazy=True))
     
