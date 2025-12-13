@@ -5,9 +5,12 @@ Ana Flask uygulaması
 
 from flask import Flask, render_template, request, jsonify, session
 from flask_cors import CORS
+from flask_login import LoginManager
 import os
 import secrets
 from dotenv import load_dotenv
+from models import db, User
+from auth import init_auth
 from services.bybit_service import BybitService
 from services.risk_analyzer import RiskAnalyzer
 from services.portfolio_manager import PortfolioManager
@@ -19,8 +22,38 @@ from services.bybit_private_api import BybitPrivateAPI
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(16)  # Session için secret key
+app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(16))
+
+# Database configuration
+database_url = os.getenv('DATABASE_URL')
+if database_url:
+    # Render PostgreSQL için
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Development için SQLite
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///crypto_risk.db'
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize extensions
+db.init_app(app)
 CORS(app)
+
+# Flask-Login setup
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'auth.login'
+login_manager.login_message = 'Lütfen giriş yapın'
+login_manager.login_message_category = 'info'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# Initialize authentication
+init_auth(app)
 
 # Servisleri başlat
 bybit_service = BybitService()
