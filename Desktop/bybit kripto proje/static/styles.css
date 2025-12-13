@@ -24,7 +24,7 @@
 }
 
 body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%) !important;
     background-attachment: fixed;
     min-height: 100vh;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
@@ -33,28 +33,63 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* TEST - ÇOK BELİRGİN DEĞİŞİKLİK */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #10b981, #3b82f6, #8b5cf6, #ec4899);
+    z-index: 9999;
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
 .main-container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
 }
 
-/* Modern Card Design - BELİRGİN DEĞİŞİKLİKLER */
+/* Modern Card Design - ÇOK BELİRGİN DEĞİŞİKLİKLER */
 .card {
-    border: none;
-    border-radius: 20px !important; /* Daha yuvarlak */
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important; /* Daha belirgin gölge */
-    margin-bottom: 24px;
-    background: var(--card-bg);
-    transition: all 0.3s ease;
+    border: 3px solid rgba(99, 102, 241, 0.3) !important; /* KALIN RENKLİ BORDER */
+    border-radius: 24px !important; /* Çok yuvarlak */
+    box-shadow: 0 15px 50px rgba(99, 102, 241, 0.3), 0 5px 15px rgba(0, 0, 0, 0.2) !important; /* ÇOK BELİRGİN GÖLGE + GLOW */
+    margin-bottom: 28px !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important; /* Gradient background */
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
     overflow: hidden;
-    border: 1px solid rgba(99, 102, 241, 0.1); /* Hafif border ekle */
+    position: relative;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.card:hover::before {
+    opacity: 1;
 }
 
 .card:hover {
-    transform: translateY(-5px) scale(1.02); /* Daha belirgin hover */
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25) !important;
-    border-color: rgba(99, 102, 241, 0.3);
+    transform: translateY(-8px) scale(1.03) !important; /* ÇOK BELİRGİN HOVER */
+    box-shadow: 0 25px 70px rgba(99, 102, 241, 0.5), 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+    border-color: rgba(99, 102, 241, 0.6) !important;
+    border-width: 4px !important;
 }
 
 .card-header {
