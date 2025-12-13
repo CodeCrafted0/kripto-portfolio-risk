@@ -364,6 +364,10 @@ def bybit_status():
     })
 
 
+# Database tablolarını oluştur
+with app.app_context():
+    db.create_all()
+
 if __name__ == '__main__':
     # Production'da gunicorn kullanılır, bu sadece development için
     port = int(os.getenv('PORT', 5000))
