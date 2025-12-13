@@ -5,7 +5,7 @@ Ana Flask uygulaması
 
 from flask import Flask, render_template, request, jsonify, session
 from flask_cors import CORS
-from flask_login import LoginManager
+from flask_login import LoginManager, login_required, current_user
 import os
 import secrets
 from dotenv import load_dotenv
@@ -81,9 +81,17 @@ def get_prices():
 
 
 @app.route('/api/analyze', methods=['POST'])
+@login_required
 def analyze_portfolio():
     """Portföy analizi yap"""
     try:
+        # Kullanım limiti kontrolü
+        if not current_user.can_use_feature('portfolio_analysis'):
+            return jsonify({
+                'success': False,
+                'error': 'Günlük analiz limitiniz doldu. Planınızı yükseltin veya yarın tekrar deneyin.'
+            }), 403
+        
         data = request.get_json()
         portfolio = data.get('portfolio', [])
         
@@ -93,9 +101,19 @@ def analyze_portfolio():
         # Analiz yap
         analysis = portfolio_manager.analyze_portfolio(portfolio)
         
+        # Kullanım istatistiklerini artır
+        try:
+            current_user.increment_usage()
+        except Exception as e:
+            print(f"Kullanım istatistiği güncellenemedi: {e}")
+        
         return jsonify({
             'success': True,
-            'data': analysis
+            'data': analysis,
+            'usage': {
+                'daily': current_user.daily_analyses,
+                'total': current_user.total_analyses
+            }
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -133,9 +151,17 @@ def get_market_data(symbol):
 
 
 @app.route('/api/analyze-leverage', methods=['POST'])
+@login_required
 def analyze_leverage():
     """Kaldıraçlı pozisyonları analiz et"""
     try:
+        # Kullanım limiti kontrolü
+        if not current_user.can_use_feature('leverage_analysis'):
+            return jsonify({
+                'success': False,
+                'error': 'Kaldıraç analizi limitiniz doldu. Planınızı yükseltin.'
+            }), 403
+        
         data = request.get_json()
         positions = data.get('positions', [])
         total_balance = float(data.get('total_balance', 0))
@@ -145,18 +171,36 @@ def analyze_leverage():
         
         analysis = leverage_analyzer.analyze_leverage_positions(positions, total_balance)
         
+        # Kullanım istatistiklerini artır
+        try:
+            current_user.increment_usage()
+        except Exception as e:
+            print(f"Kullanım istatistiği güncellenemedi: {e}")
+        
         return jsonify({
             'success': True,
-            'data': analysis
+            'data': analysis,
+            'usage': {
+                'daily': current_user.daily_analyses,
+                'total': current_user.total_analyses
+            }
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/position-size', methods=['POST'])
+@login_required
 def calculate_position_size():
     """Optimal pozisyon boyutu hesapla"""
     try:
+        # Kullanım limiti kontrolü
+        if not current_user.can_use_feature('position_sizing'):
+            return jsonify({
+                'success': False,
+                'error': 'Pozisyon boyutu hesaplama limitiniz doldu. Planınızı yükseltin.'
+            }), 403
+        
         data = request.get_json()
         symbol = data.get('symbol', '').upper()
         account_balance = float(data.get('account_balance', 0))
@@ -174,9 +218,19 @@ def calculate_position_size():
         if 'error' in result:
             return jsonify({'success': False, 'error': result['error']}), 400
         
+        # Kullanım istatistiklerini artır
+        try:
+            current_user.increment_usage()
+        except Exception as e:
+            print(f"Kullanım istatistiği güncellenemedi: {e}")
+        
         return jsonify({
             'success': True,
-            'data': result
+            'data': result,
+            'usage': {
+                'daily': current_user.daily_analyses,
+                'total': current_user.total_analyses
+            }
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

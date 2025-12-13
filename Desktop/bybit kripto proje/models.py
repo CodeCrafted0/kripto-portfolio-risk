@@ -39,6 +39,7 @@ class User(UserMixin, db.Model):
     total_analyses = db.Column(db.Integer, default=0)
     daily_analyses = db.Column(db.Integer, default=0)
     last_analysis_date = db.Column(db.Date, nullable=True)
+    last_login = db.Column(db.DateTime, nullable=True)
     
     def __repr__(self):
         return f'<User {self.email}>'

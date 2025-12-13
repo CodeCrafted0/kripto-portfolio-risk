@@ -22,6 +22,9 @@ def init_auth(app):
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     """Kullanıcı kayıt"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
@@ -68,6 +71,9 @@ def register():
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Kullanıcı giriş"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
@@ -78,19 +84,30 @@ def login():
         
         user = User.query.filter_by(email=email).first()
         
-        if user and bcrypt.check_password_hash(user.password_hash, password):
-            if not user.is_active:
-                flash('Hesabınız deaktif edilmiş', 'error')
-                return render_template('auth/login.html')
-            
-            login_user(user)
-            flash('Giriş başarılı!', 'success')
-            
-            # Yönlendirme
-            next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('index'))
-        else:
+        if not user:
             flash('Email veya şifre hatalı', 'error')
+            return render_template('auth/login.html')
+        
+        # Şifre kontrolü - daha güvenli
+        try:
+            if bcrypt.check_password_hash(user.password_hash, password):
+                if not user.is_active:
+                    flash('Hesabınız deaktif edilmiş', 'error')
+                    return render_template('auth/login.html')
+                
+                login_user(user)
+                user.last_login = datetime.utcnow()  # Son giriş zamanını güncelle
+                db.session.commit()
+                flash('Giriş başarılı! Hoş geldiniz!', 'success')
+                
+                # Yönlendirme
+                next_page = request.args.get('next')
+                return redirect(next_page) if next_page else redirect(url_for('index'))
+            else:
+                flash('Email veya şifre hatalı', 'error')
+        except Exception as e:
+            # Şifre hash sorunu olabilir - yeni hash ile deneyelim
+            flash('Giriş hatası oluştu. Lütfen tekrar deneyin.', 'error')
     
     return render_template('auth/login.html')
 
