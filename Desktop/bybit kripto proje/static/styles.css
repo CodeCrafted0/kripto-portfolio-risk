@@ -63,7 +63,7 @@ body::before {
     border-radius: 24px !important; /* Çok yuvarlak */
     box-shadow: 0 15px 50px rgba(99, 102, 241, 0.3), 0 5px 15px rgba(0, 0, 0, 0.2) !important; /* ÇOK BELİRGİN GÖLGE + GLOW */
     margin-bottom: 28px !important;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important; /* Gradient background */
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important; /* AÇIK MAVİ - TEST İÇİN */
     transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
     overflow: hidden;
     position: relative;
