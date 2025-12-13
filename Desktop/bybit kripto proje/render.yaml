@@ -3,7 +3,6 @@ services:
   - type: web
     name: kripto-portfolio-risk
     env: python
-    rootDir: Desktop/bybit kripto proje
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
