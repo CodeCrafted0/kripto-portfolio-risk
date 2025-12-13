@@ -165,19 +165,30 @@ def profile():
 @auth_bp.route('/verify-email/<token>')
 def verify_email(token):
     """Email doğrulama"""
-    user, error = EmailService.verify_token(token)
-    
-    if error:
-        flash(error, 'error')
+    try:
+        if not token:
+            flash('Geçersiz doğrulama linki', 'error')
+            return redirect(url_for('auth.login'))
+        
+        user, error = EmailService.verify_token(token)
+        
+        if error:
+            flash(error, 'error')
+            return redirect(url_for('auth.login'))
+        
+        if user:
+            # Email doğrulandı, kullanıcıyı giriş yap
+            login_user(user, remember=True)
+            flash('Email adresiniz başarıyla doğrulandı! Artık giriş yapabilirsiniz.', 'success')
+            return redirect(url_for('index'))
+        
+        flash('Geçersiz doğrulama linki', 'error')
         return redirect(url_for('auth.login'))
-    
-    if user:
-        flash('Email adresiniz başarıyla doğrulandı!', 'success')
-        login_user(user)
-        return redirect(url_for('index'))
-    
-    flash('Geçersiz doğrulama linki', 'error')
-    return redirect(url_for('auth.login'))
+        
+    except Exception as e:
+        print(f"Email verification error: {str(e)}")
+        flash('Email doğrulama sırasında bir hata oluştu. Lütfen tekrar deneyin.', 'error')
+        return redirect(url_for('auth.login'))
 
 
 @auth_bp.route('/email-verification-required')

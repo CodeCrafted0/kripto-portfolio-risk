@@ -103,21 +103,34 @@ class EmailService:
     @staticmethod
     def verify_token(token):
         """Token doğrulama"""
-        user = User.query.filter_by(email_verification_token=token).first()
-        
-        if not user:
-            return None, "Geçersiz veya süresi dolmuş token"
-        
-        # Token süresi kontrolü (24 saat)
-        if user.email_verification_sent_at:
-            expires_at = user.email_verification_sent_at + timedelta(hours=24)
-            if datetime.utcnow() > expires_at:
-                return None, "Token süresi dolmuş. Lütfen yeni bir doğrulama email'i talep edin."
-        
-        # Email'i doğrula
-        user.email_verified = True
-        user.email_verification_token = None
-        user.email_verification_sent_at = None
-        db.session.commit()
-        
-        return user, None
+        try:
+            if not token:
+                return None, "Geçersiz doğrulama linki"
+            
+            user = User.query.filter_by(email_verification_token=token).first()
+            
+            if not user:
+                return None, "Geçersiz veya süresi dolmuş token. Lütfen yeni bir doğrulama email'i talep edin."
+            
+            # Zaten doğrulanmış mı?
+            if user.email_verified:
+                return user, None  # Kullanıcı zaten doğrulanmış, hata yok
+            
+            # Token süresi kontrolü (24 saat)
+            if user.email_verification_sent_at:
+                expires_at = user.email_verification_sent_at + timedelta(hours=24)
+                if datetime.utcnow() > expires_at:
+                    return None, "Token süresi dolmuş. Lütfen yeni bir doğrulama email'i talep edin."
+            
+            # Email'i doğrula
+            user.email_verified = True
+            user.email_verification_token = None
+            user.email_verification_sent_at = None
+            db.session.commit()
+            
+            return user, None
+            
+        except Exception as e:
+            print(f"Token verification error: {str(e)}")
+            db.session.rollback()
+            return None, "Email doğrulama sırasında bir hata oluştu. Lütfen tekrar deneyin."
