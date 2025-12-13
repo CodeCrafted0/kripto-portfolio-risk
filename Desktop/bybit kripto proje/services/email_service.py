@@ -9,12 +9,6 @@ from datetime import datetime, timedelta
 from models import db, User
 
 
-def get_mail():
-    """Mail extension'ını al"""
-    from extensions import mail
-    return mail
-
-
 class EmailService:
     """Email gönderme servisi"""
     
@@ -97,7 +91,8 @@ class EmailService:
                 body=text_body
             )
             
-            mail = get_mail()
+            # Mail extension'ını app context'ten al
+            from extensions import mail
             mail.send(msg)
             return True
             
