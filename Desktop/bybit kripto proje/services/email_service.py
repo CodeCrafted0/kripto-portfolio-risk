@@ -84,33 +84,48 @@ class EmailService:
             Kripto Portföy Risk Analiz Platformu
             """
             
+            # Email ayarlarını kontrol et
+            mail_server = current_app.config.get('MAIL_SERVER')
+            mail_username = current_app.config.get('MAIL_USERNAME')
+            mail_password = current_app.config.get('MAIL_PASSWORD')
+            
+            if not mail_server or not mail_username or not mail_password:
+                print(f"Email gönderme hatası: Gerekli email ayarları eksik!")
+                print(f"MAIL_SERVER: {mail_server}")
+                print(f"MAIL_USERNAME: {mail_username}")
+                print(f"MAIL_PASSWORD ayarlı mı: {bool(mail_password)}")
+                return False
+            
+            # Mail extension'ını app context'ten al
+            from extensions import mail
+            
             msg = Message(
                 subject=subject,
                 recipients=recipients,
                 html=html_body,
                 body=text_body,
-                sender=current_app.config.get('MAIL_DEFAULT_SENDER')
+                sender=current_app.config.get('MAIL_DEFAULT_SENDER', mail_username)
             )
             
-            # Mail extension'ını app context'ten al
-            from extensions import mail
-            
             # Email göndermeyi dene
-            try:
-                mail.send(msg)
-                print(f"Email başarıyla gönderildi: {user.email}")
-                return True
-            except Exception as send_error:
-                print(f"Email gönderme hatası (mail.send): {str(send_error)}")
-                print(f"MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}")
-                print(f"MAIL_USERNAME: {current_app.config.get('MAIL_USERNAME')}")
-                print(f"MAIL_PASSWORD ayarlı mı: {bool(current_app.config.get('MAIL_PASSWORD'))}")
-                return False
+            mail.send(msg)
+            print(f"Email başarıyla gönderildi: {user.email}")
+            return True
             
         except Exception as e:
-            print(f"Email gönderme hatası (genel): {str(e)}")
+            error_msg = str(e)
+            print(f"Email gönderme hatası: {error_msg}")
             import traceback
             traceback.print_exc()
+            
+            # Özel hata mesajları
+            if "authentication failed" in error_msg.lower() or "535" in error_msg:
+                print("HATA: Email authentication başarısız! MAIL_USERNAME ve MAIL_PASSWORD kontrol edin.")
+            elif "connection" in error_msg.lower() or "refused" in error_msg.lower():
+                print("HATA: SMTP server'a bağlanılamıyor! MAIL_SERVER ve MAIL_PORT kontrol edin.")
+            elif "timeout" in error_msg.lower():
+                print("HATA: Email gönderimi zaman aşımına uğradı!")
+            
             return False
     
     @staticmethod
