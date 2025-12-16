@@ -14,19 +14,19 @@ class EmailService:
     
     @staticmethod
     def send_verification_email(user):
-        """Email doğrulama linki gönder"""
+        """Email doğrulama kodu gönder (6 haneli)"""
         try:
-            # Verification token oluştur
-            token = secrets.token_urlsafe(32)
-            user.email_verification_token = token
+            # 6 haneli kod oluştur
+            import random
+            code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+            user.email_verification_code = code
             user.email_verification_sent_at = datetime.utcnow()
             db.session.commit()
             
-            # Verification URL oluştur
-            verification_url = url_for('auth.verify_email', token=token, _external=True)
+            print(f"Email doğrulama kodu oluşturuldu: {code} (Email: {user.email})")
             
             # Email oluştur
-            subject = "Email Adresinizi Doğrulayın - Kripto Portföy Risk Analiz"
+            subject = "Email Doğrulama Kodu - Kripto Portföy Risk Analiz"
             recipients = [user.email]
             
             html_body = f"""
@@ -39,25 +39,28 @@ class EmailService:
                     .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
                     .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
                     .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
-                    .button {{ display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 20px 0; font-weight: bold; }}
+                    .code-box {{ background: white; border: 3px solid #667eea; border-radius: 10px; padding: 20px; text-align: center; margin: 30px 0; }}
+                    .code {{ font-size: 36px; font-weight: bold; letter-spacing: 10px; color: #667eea; font-family: 'Courier New', monospace; }}
                     .footer {{ text-align: center; margin-top: 30px; color: #666; font-size: 0.9em; }}
+                    .warning {{ background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }}
                 </style>
             </head>
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>Email Doğrulama</h1>
+                        <h1>Email Doğrulama Kodu</h1>
                     </div>
                     <div class="content">
                         <p>Merhaba {user.name or user.email},</p>
                         <p>Kripto Portföy Risk Analiz Platformu'na hoş geldiniz!</p>
-                        <p>Hesabınızı aktifleştirmek için aşağıdaki butona tıklayın:</p>
-                        <p style="text-align: center;">
-                            <a href="{verification_url}" class="button">Email Adresimi Doğrula</a>
-                        </p>
-                        <p>Veya bu linki tarayıcınıza yapıştırın:</p>
-                        <p style="word-break: break-all; color: #667eea;">{verification_url}</p>
-                        <p><strong>Önemli:</strong> Bu link 24 saat geçerlidir.</p>
+                        <p>Hesabınızı aktifleştirmek için aşağıdaki doğrulama kodunu kullanın:</p>
+                        <div class="code-box">
+                            <div class="code">{code}</div>
+                        </div>
+                        <p style="text-align: center;">Bu kodu doğrulama sayfasına girin.</p>
+                        <div class="warning">
+                            <strong>⚠️ Önemli:</strong> Bu kod 10 dakika geçerlidir ve sadece bir kez kullanılabilir.
+                        </div>
                         <p>Eğer bu işlemi siz yapmadıysanız, bu email'i görmezden gelebilirsiniz.</p>
                     </div>
                     <div class="footer">
@@ -74,10 +77,13 @@ class EmailService:
             
             Kripto Portföy Risk Analiz Platformu'na hoş geldiniz!
             
-            Hesabınızı aktifleştirmek için aşağıdaki linke tıklayın:
-            {verification_url}
+            Hesabınızı aktifleştirmek için aşağıdaki doğrulama kodunu kullanın:
             
-            Bu link 24 saat geçerlidir.
+            {code}
+            
+            Bu kodu doğrulama sayfasına girin.
+            
+            ÖNEMLİ: Bu kod 10 dakika geçerlidir ve sadece bir kez kullanılabilir.
             
             Eğer bu işlemi siz yapmadıysanız, bu email'i görmezden gelebilirsiniz.
             
@@ -129,36 +135,53 @@ class EmailService:
             return False
     
     @staticmethod
-    def verify_token(token):
-        """Token doğrulama"""
+    def verify_code(email, code):
+        """6 haneli kod ile email doğrulama"""
         try:
-            if not token:
-                return None, "Geçersiz doğrulama linki"
+            if not email or not code:
+                return None, "Email ve kod gereklidir"
             
-            user = User.query.filter_by(email_verification_token=token).first()
+            # Kod'u temizle (boşlukları kaldır)
+            code = code.strip().replace(' ', '').replace('-', '')
+            
+            if len(code) != 6 or not code.isdigit():
+                return None, "Geçersiz kod formatı. 6 haneli sayısal kod giriniz."
+            
+            user = User.query.filter_by(email=email.lower()).first()
             
             if not user:
-                return None, "Geçersiz veya süresi dolmuş token. Lütfen yeni bir doğrulama email'i talep edin."
+                return None, "Kullanıcı bulunamadı"
             
             # Zaten doğrulanmış mı?
             if user.email_verified:
                 return user, None  # Kullanıcı zaten doğrulanmış, hata yok
             
-            # Token süresi kontrolü (24 saat)
+            # Kod kontrolü
+            if not user.email_verification_code:
+                return None, "Doğrulama kodu bulunamadı. Lütfen yeni bir kod talep edin."
+            
+            if user.email_verification_code != code:
+                return None, "Geçersiz doğrulama kodu. Lütfen tekrar deneyin."
+            
+            # Kod süresi kontrolü (10 dakika)
             if user.email_verification_sent_at:
-                expires_at = user.email_verification_sent_at + timedelta(hours=24)
+                expires_at = user.email_verification_sent_at + timedelta(minutes=10)
                 if datetime.utcnow() > expires_at:
-                    return None, "Token süresi dolmuş. Lütfen yeni bir doğrulama email'i talep edin."
+                    return None, "Kod süresi dolmuş. Lütfen yeni bir doğrulama kodu talep edin."
             
             # Email'i doğrula
             user.email_verified = True
+            user.email_verification_code = None
             user.email_verification_token = None
             user.email_verification_sent_at = None
             db.session.commit()
             
+            print(f"Email doğrulandı: {user.email}")
             return user, None
             
         except Exception as e:
-            print(f"Token verification error: {str(e)}")
+            print(f"Code verification error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             db.session.rollback()
             return None, "Email doğrulama sırasında bir hata oluştu. Lütfen tekrar deneyin."

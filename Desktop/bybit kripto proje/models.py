@@ -38,6 +38,7 @@ class User(UserMixin, db.Model):
     # Email doğrulama
     email_verified = db.Column(db.Boolean, default=False)
     email_verification_token = db.Column(db.String(100), nullable=True, unique=True)
+    email_verification_code = db.Column(db.String(6), nullable=True)  # 6 haneli kod
     email_verification_sent_at = db.Column(db.DateTime, nullable=True)
     
     # Kullanım istatistikleri
