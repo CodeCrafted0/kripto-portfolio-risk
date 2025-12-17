@@ -26,9 +26,15 @@
                 <div>
                     {% if current_user.is_authenticated %}
                         <span class="badge bg-light text-dark me-2">{{ current_user.email }}</span>
+                        <a href="{{ url_for('payment.pricing') }}" class="btn btn-light btn-sm me-2">
+                            <i class="bi bi-star"></i> Planlar
+                        </a>
                         <a href="{{ url_for('auth.profile') }}" class="btn btn-light btn-sm me-2">Profil</a>
                         <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-light btn-sm">Çıkış</a>
                     {% else %}
+                        <a href="{{ url_for('payment.pricing') }}" class="btn btn-light btn-sm me-2">
+                            <i class="bi bi-star"></i> Fiyatlandırma
+                        </a>
                         <a href="{{ url_for('auth.login') }}" class="btn btn-light btn-sm me-2">Giriş Yap</a>
                         <a href="{{ url_for('auth.register') }}" class="btn btn-outline-light btn-sm">Kayıt Ol</a>
                     {% endif %}

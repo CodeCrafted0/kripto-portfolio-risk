@@ -11,6 +11,7 @@ import secrets
 from dotenv import load_dotenv
 from models import db, User
 from auth import init_auth
+from payment import init_payment
 from extensions import mail
 from services.bybit_service import BybitService
 from services.risk_analyzer import RiskAnalyzer
@@ -65,6 +66,9 @@ def load_user(user_id):
 
 # Initialize authentication
 init_auth(app)
+
+# Initialize payment
+init_payment(app)
 
 # Servisleri başlat
 bybit_service = BybitService()
