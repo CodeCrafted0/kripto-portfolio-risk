@@ -92,40 +92,84 @@ class EmailService:
             
             # Email ayarlarını kontrol et
             mail_server = current_app.config.get('MAIL_SERVER')
+            mail_port = current_app.config.get('MAIL_PORT')
+            mail_use_tls = current_app.config.get('MAIL_USE_TLS')
             mail_username = current_app.config.get('MAIL_USERNAME')
             mail_password = current_app.config.get('MAIL_PASSWORD')
             
+            print(f"📧 Email ayarları kontrol ediliyor...")
+            print(f"   MAIL_SERVER: {mail_server}")
+            print(f"   MAIL_PORT: {mail_port}")
+            print(f"   MAIL_USE_TLS: {mail_use_tls}")
+            print(f"   MAIL_USERNAME: {mail_username}")
+            print(f"   MAIL_PASSWORD ayarlı mı: {bool(mail_password)}")
+            print(f"   MAIL_PASSWORD uzunluğu: {len(mail_password) if mail_password else 0}")
+            
             if not mail_server or not mail_username or not mail_password:
-                print(f"Email gönderme hatası: Gerekli email ayarları eksik!")
-                print(f"MAIL_SERVER: {mail_server}")
-                print(f"MAIL_USERNAME: {mail_username}")
-                print(f"MAIL_PASSWORD ayarlı mı: {bool(mail_password)}")
+                print(f"❌ Email gönderme hatası: Gerekli email ayarları eksik!")
+                print(f"   MAIL_SERVER: {mail_server}")
+                print(f"   MAIL_USERNAME: {mail_username}")
+                print(f"   MAIL_PASSWORD ayarlı mı: {bool(mail_password)}")
                 return False
             
             # Mail extension'ını app context'ten al
             from extensions import mail
+            
+            # Sender'ı mail_username ile aynı yap (Gmail için önemli)
+            sender_email = current_app.config.get('MAIL_DEFAULT_SENDER', mail_username)
+            if not sender_email or sender_email == 'noreply@kriptorisk.com':
+                sender_email = mail_username  # Gmail kendi adresiyle göndermeli
+            
+            print(f"📧 Email mesajı oluşturuluyor...")
+            print(f"   From: {sender_email}")
+            print(f"   To: {recipients}")
+            print(f"   Subject: {subject}")
             
             msg = Message(
                 subject=subject,
                 recipients=recipients,
                 html=html_body,
                 body=text_body,
-                sender=current_app.config.get('MAIL_DEFAULT_SENDER', mail_username)
+                sender=sender_email
             )
             
             # Email göndermeyi dene
             try:
-                print(f"📧 Email gönderiliyor: {user.email}, Kod: {code}")
-                mail.send(msg)
+                print(f"📧 SMTP bağlantısı yapılıyor ve email gönderiliyor...")
+                print(f"   Email: {user.email}, Kod: {code}")
+                
+                # Flask-Mail send metodunu çağır
+                with current_app.app_context():
+                    mail.send(msg)
+                
                 print(f"✅ Email başarıyla gönderildi: {user.email}, Kod: {code}")
                 return True
+                
             except Exception as send_error:
                 error_msg = str(send_error)
+                error_lower = error_msg.lower()
+                
                 print(f"❌ Email gönderme hatası (mail.send): {error_msg}")
                 print(f"   MAIL_SERVER: {mail_server}")
+                print(f"   MAIL_PORT: {mail_port}")
+                print(f"   MAIL_USE_TLS: {mail_use_tls}")
                 print(f"   MAIL_USERNAME: {mail_username}")
                 print(f"   MAIL_PASSWORD ayarlı mı: {bool(mail_password)}")
                 print(f"   MAIL_PASSWORD uzunluğu: {len(mail_password) if mail_password else 0}")
+                
+                # Özel hata mesajları
+                if "authentication failed" in error_lower or "535" in error_msg:
+                    print(f"⚠️ HATA TİPİ: Authentication başarısız!")
+                    print(f"   → MAIL_USERNAME veya MAIL_PASSWORD yanlış olabilir")
+                    print(f"   → Gmail App Password kullandığınızdan emin olun (normal şifre çalışmaz!)")
+                elif "connection" in error_lower or "refused" in error_lower or "timed out" in error_lower:
+                    print(f"⚠️ HATA TİPİ: SMTP server'a bağlanılamıyor!")
+                    print(f"   → MAIL_SERVER veya MAIL_PORT yanlış olabilir")
+                    print(f"   → Gmail için: smtp.gmail.com:587 kullanın")
+                elif "timeout" in error_lower:
+                    print(f"⚠️ HATA TİPİ: Bağlantı zaman aşımına uğradı!")
+                    print(f"   → Network sorunu olabilir, tekrar deneyin")
+                
                 import traceback
                 traceback.print_exc()
                 return False

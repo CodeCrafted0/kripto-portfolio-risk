@@ -46,7 +46,9 @@ app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
 app.config['MAIL_USE_SSL'] = os.getenv('MAIL_USE_SSL', 'False').lower() == 'true'
 app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', '')
 app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', '')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@kriptorisk.com')
+# MAIL_DEFAULT_SENDER - Gmail için mail_username ile aynı olmalı
+mail_username_env = os.getenv('MAIL_USERNAME', '')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', mail_username_env)
 
 # Initialize extensions
 db.init_app(app)
