@@ -114,9 +114,19 @@ class EmailService:
             )
             
             # Email göndermeyi dene
-            mail.send(msg)
-            print(f"Email başarıyla gönderildi: {user.email}")
-            return True
+            try:
+                mail.send(msg)
+                print(f"✅ Email başarıyla gönderildi: {user.email}, Kod: {code}")
+                return True
+            except Exception as send_error:
+                error_msg = str(send_error)
+                print(f"❌ Email gönderme hatası (mail.send): {error_msg}")
+                print(f"   MAIL_SERVER: {mail_server}")
+                print(f"   MAIL_USERNAME: {mail_username}")
+                print(f"   MAIL_PASSWORD ayarlı mı: {bool(mail_password)}")
+                import traceback
+                traceback.print_exc()
+                return False
             
         except Exception as e:
             error_msg = str(e)
