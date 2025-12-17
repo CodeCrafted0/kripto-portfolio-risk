@@ -66,23 +66,22 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        # Email doğrulama kodu gönder (arka planda, timeout önlemek için)
-        def send_email_async():
-            try:
-                with _app.app_context():
-                    EmailService.send_verification_email(user)
-            except Exception as e:
-                print(f"Email gönderme hatası (arka plan): {str(e)}")
-                import traceback
-                traceback.print_exc()
+        # Email doğrulama kodu gönder (SENKRON - debug için, hataları görmek için)
+        print(f"📧 Register: Email gönderme başlatılıyor - {user.email}")
+        try:
+            email_sent = EmailService.send_verification_email(user)
+            if email_sent:
+                print(f"✅ Register: Email başarıyla gönderildi - {user.email}")
+                flash('Kayıt başarılı! Email adresinize 6 haneli doğrulama kodu gönderildi. Lütfen email\'inizi kontrol edin.', 'success')
+            else:
+                print(f"❌ Register: Email gönderilemedi - {user.email}")
+                flash('Kayıt başarılı! Ancak doğrulama kodu gönderilemedi. Lütfen email doğrulama sayfasından tekrar göndermeyi deneyin.', 'warning')
+        except Exception as e:
+            print(f"❌ Register: Email gönderme exception - {user.email}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            flash('Kayıt başarılı! Ancak doğrulama kodu gönderilemedi. Lütfen email doğrulama sayfasından tekrar göndermeyi deneyin.', 'warning')
         
-        # Thread başlat - email gönderimi arka planda yapılacak
-        email_thread = threading.Thread(target=send_email_async)
-        email_thread.daemon = True
-        email_thread.start()
-        
-        # Hemen response döndür (timeout önlemek için)
-        flash('Kayıt başarılı! Email adresinize 6 haneli doğrulama kodu gönderiliyor. Lütfen email\'inizi kontrol edin.', 'success')
         return redirect(url_for('auth.verify_email_code', email=user.email))
     
     return render_template('auth/register.html')
