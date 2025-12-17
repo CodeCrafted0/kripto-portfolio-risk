@@ -54,34 +54,50 @@ def register():
             return render_template('auth/register.html')
         
         # Yeni kullanıcı oluştur
-        password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
-        user = User(
-            email=email,
-            password_hash=password_hash,
-            name=name or None,
-            subscription_plan=SubscriptionPlan.FREE,
-            email_verified=False
-        )
-        
-        db.session.add(user)
-        db.session.commit()
-        
-        # Email doğrulama kodu gönder (SENKRON - debug için, hataları görmek için)
-        print(f"📧 Register: Email gönderme başlatılıyor - {user.email}")
         try:
-            email_sent = EmailService.send_verification_email(user)
-            if email_sent:
-                print(f"✅ Register: Email başarıyla gönderildi - {user.email}")
-                flash('Kayıt başarılı! Email adresinize 6 haneli doğrulama kodu gönderildi. Lütfen email\'inizi kontrol edin.', 'success')
-            else:
-                print(f"❌ Register: Email gönderilemedi - {user.email}")
-                flash('Kayıt başarılı! Ancak doğrulama kodu gönderilemedi. Lütfen email doğrulama sayfasından tekrar göndermeyi deneyin.', 'warning')
+            password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+            user = User(
+                email=email,
+                password_hash=password_hash,
+                name=name or None,
+                subscription_plan=SubscriptionPlan.FREE,
+                email_verified=False
+            )
+            
+            db.session.add(user)
+            db.session.commit()
+            print(f"✅ User created successfully: {email}")
         except Exception as e:
-            print(f"❌ Register: Email gönderme exception - {user.email}: {str(e)}")
+            db.session.rollback()
+            print(f"❌ Register database error: {str(e)}")
             import traceback
             traceback.print_exc()
-            flash('Kayıt başarılı! Ancak doğrulama kodu gönderilemedi. Lütfen email doğrulama sayfasından tekrar göndermeyi deneyin.', 'warning')
+            flash('Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.', 'error')
+            return render_template('auth/register.html')
         
+        # Email doğrulama kodu gönder (ASYNC - timeout önlemek için)
+        print(f"📧 Register: Email gönderme başlatılıyor (async) - {user.email}")
+        
+        def send_email_async():
+            try:
+                with _app.app_context():
+                    email_sent = EmailService.send_verification_email(user)
+                    if email_sent:
+                        print(f"✅ Register (async): Email başarıyla gönderildi - {user.email}")
+                    else:
+                        print(f"❌ Register (async): Email gönderilemedi - {user.email}")
+            except Exception as e:
+                print(f"❌ Register (async): Email gönderme exception - {user.email}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+        
+        # Thread başlat - email gönderimi arka planda yapılacak (timeout önlemek için)
+        email_thread = threading.Thread(target=send_email_async)
+        email_thread.daemon = True
+        email_thread.start()
+        
+        # Hemen response döndür (timeout önlemek için)
+        flash('Kayıt başarılı! Email adresinize 6 haneli doğrulama kodu gönderiliyor. Lütfen email\'inizi kontrol edin.', 'success')
         return redirect(url_for('auth.verify_email_code', email=user.email))
     
     return render_template('auth/register.html')
@@ -149,6 +165,11 @@ def login():
             import traceback
             traceback.print_exc()
             flash('Giriş hatası oluştu. Lütfen tekrar deneyin.', 'error')
+        except Exception as e:
+            print(f"❌ Login exception: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            flash('Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.', 'error')
     
     return render_template('auth/login.html')
 
