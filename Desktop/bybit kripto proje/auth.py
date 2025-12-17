@@ -135,8 +135,15 @@ def login():
             if isinstance(password_hash, bytes):
                 password_hash = password_hash.decode('utf-8')
             
+            # Debug için daha fazla bilgi
+            print(f"🔐 Login attempt:")
+            print(f"   Email: {email}")
+            print(f"   User found: {user is not None}")
+            print(f"   Password hash exists: {bool(password_hash)}")
+            
             password_match = bcrypt.check_password_hash(password_hash, password)
-            print(f"Login attempt - Email: {email}, Password match: {password_match}, Email verified: {user.email_verified}")
+            print(f"   Password match: {password_match}")
+            print(f"   Email verified: {user.email_verified}")
             
             if password_match:
                 if not user.is_active:
