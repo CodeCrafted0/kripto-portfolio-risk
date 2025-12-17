@@ -252,21 +252,19 @@ def resend_verification():
         flash('Email adresiniz zaten doğrulanmış. Giriş yapabilirsiniz.', 'success')
         return redirect(url_for('auth.login'))
     
-    # Email gönderimini arka planda yap (timeout önlemek için)
-    def send_email_async():
-        try:
-            with _app.app_context():
-                EmailService.send_verification_email(user)
-        except Exception as e:
-            print(f"Email gönderme hatası (arka plan): {str(e)}")
-            import traceback
-            traceback.print_exc()
+    # Email gönderimini yap
+    try:
+        email_sent = EmailService.send_verification_email(user)
+        if email_sent:
+            flash('Doğrulama kodu gönderildi. Lütfen email adresinizi kontrol edin.', 'success')
+        else:
+            flash('Kod gönderilemedi. Lütfen email ayarlarını kontrol edin veya daha sonra tekrar deneyin.', 'error')
+    except Exception as e:
+        print(f"❌ Email gönderme hatası (resend): {str(e)}")
+        import traceback
+        traceback.print_exc()
+        flash('Kod gönderilemedi. Lütfen daha sonra tekrar deneyin.', 'error')
     
-    email_thread = threading.Thread(target=send_email_async)
-    email_thread.daemon = True
-    email_thread.start()
-    
-    flash('Doğrulama kodu gönderiliyor. Lütfen email adresinizi kontrol edin.', 'success')
     return redirect(url_for('auth.verify_email_code', email=email))
 
 

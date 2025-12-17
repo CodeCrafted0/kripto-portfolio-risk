@@ -115,6 +115,7 @@ class EmailService:
             
             # Email göndermeyi dene
             try:
+                print(f"📧 Email gönderiliyor: {user.email}, Kod: {code}")
                 mail.send(msg)
                 print(f"✅ Email başarıyla gönderildi: {user.email}, Kod: {code}")
                 return True
@@ -124,6 +125,7 @@ class EmailService:
                 print(f"   MAIL_SERVER: {mail_server}")
                 print(f"   MAIL_USERNAME: {mail_username}")
                 print(f"   MAIL_PASSWORD ayarlı mı: {bool(mail_password)}")
+                print(f"   MAIL_PASSWORD uzunluğu: {len(mail_password) if mail_password else 0}")
                 import traceback
                 traceback.print_exc()
                 return False
