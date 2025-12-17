@@ -66,17 +66,23 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        # Email doğrulama kodu gönder
-        try:
-            email_sent = EmailService.send_verification_email(user)
-            if email_sent:
-                flash('Kayıt başarılı! Email adresinize 6 haneli doğrulama kodu gönderildi. Lütfen email\'inizi kontrol edin.', 'success')
-            else:
-                flash('Kayıt başarılı! Ancak doğrulama kodu gönderilemedi. Lütfen email doğrulama sayfasından tekrar göndermeyi deneyin.', 'warning')
-        except Exception as e:
-            print(f"Email gönderme hatası: {str(e)}")
-            flash('Kayıt başarılı! Ancak doğrulama kodu gönderilemedi. Lütfen email doğrulama sayfasından tekrar göndermeyi deneyin.', 'warning')
+        # Email doğrulama kodu gönder (arka planda, timeout önlemek için)
+        def send_email_async():
+            try:
+                with _app.app_context():
+                    EmailService.send_verification_email(user)
+            except Exception as e:
+                print(f"Email gönderme hatası (arka plan): {str(e)}")
+                import traceback
+                traceback.print_exc()
         
+        # Thread başlat - email gönderimi arka planda yapılacak
+        email_thread = threading.Thread(target=send_email_async)
+        email_thread.daemon = True
+        email_thread.start()
+        
+        # Hemen response döndür (timeout önlemek için)
+        flash('Kayıt başarılı! Email adresinize 6 haneli doğrulama kodu gönderiliyor. Lütfen email\'inizi kontrol edin.', 'success')
         return redirect(url_for('auth.verify_email_code', email=user.email))
     
     return render_template('auth/register.html')
@@ -125,7 +131,7 @@ def login():
                 # Email doğrulama ZORUNLU - doğrulanmamışsa giriş yapamaz
                 if not user.email_verified:
                     flash('Email adresinizi doğrulamanız gerekiyor. Lütfen email adresinize gelen doğrulama kodunu girin.', 'warning')
-                    return redirect(url_for('auth.verify_email_code'))
+                    return redirect(url_for('auth.verify_email_code', email=user.email))
                 
                 login_user(user, remember=True)  # Remember me özelliği
                 user.last_login = datetime.utcnow()  # Son giriş zamanını güncelle
@@ -246,16 +252,21 @@ def resend_verification():
         flash('Email adresiniz zaten doğrulanmış. Giriş yapabilirsiniz.', 'success')
         return redirect(url_for('auth.login'))
     
-    try:
-        email_sent = EmailService.send_verification_email(user)
-        if email_sent:
-            flash('Doğrulama kodu tekrar gönderildi. Lütfen email adresinizi kontrol edin.', 'success')
-        else:
-            flash('Kod gönderilemedi. Lütfen daha sonra tekrar deneyin.', 'error')
-    except Exception as e:
-        print(f"Resend verification error: {str(e)}")
-        flash('Kod gönderilemedi. Lütfen daha sonra tekrar deneyin.', 'error')
+    # Email gönderimini arka planda yap (timeout önlemek için)
+    def send_email_async():
+        try:
+            with _app.app_context():
+                EmailService.send_verification_email(user)
+        except Exception as e:
+            print(f"Email gönderme hatası (arka plan): {str(e)}")
+            import traceback
+            traceback.print_exc()
     
+    email_thread = threading.Thread(target=send_email_async)
+    email_thread.daemon = True
+    email_thread.start()
+    
+    flash('Doğrulama kodu gönderiliyor. Lütfen email adresinizi kontrol edin.', 'success')
     return redirect(url_for('auth.verify_email_code', email=email))
 
 

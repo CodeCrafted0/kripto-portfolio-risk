@@ -442,6 +442,8 @@ with app.app_context():
         print(f"⚠️ Database tablo oluşturma hatası (devam ediliyor): {str(e)}")
         # Production'da database olmayabilir, uygulama çalışmaya devam eder
 
+# Not: Gunicorn timeout ayarı Procfile'da yapıldı
+
 if __name__ == '__main__':
     # Production'da gunicorn kullanılır, bu sadece development için
     port = int(os.getenv('PORT', 5000))
