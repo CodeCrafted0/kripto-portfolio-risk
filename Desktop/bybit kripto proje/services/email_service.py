@@ -135,24 +135,53 @@ class EmailService:
                 sender=sender_email
             )
             
-            # Email göndermeyi dene - timeout ile
+            # Email göndermeyi dene - doğrudan smtplib ile (Flask-Mail yerine)
             try:
                 print(f"📧 SMTP bağlantısı yapılıyor ve email gönderiliyor...")
                 print(f"   Email: {user.email}, Kod: {code}")
                 
-                # Socket timeout ayarla (10 saniye)
-                original_timeout = socket.getdefaulttimeout()
-                socket.setdefaulttimeout(10)  # 10 saniye timeout
+                # Doğrudan smtplib kullan (Flask-Mail'in timeout sorunlarından kaçınmak için)
+                import smtplib
+                from email.mime.text import MIMEText
+                from email.mime.multipart import MIMEMultipart
                 
+                # Email mesajını oluştur
+                smtp_msg = MIMEMultipart('alternative')
+                smtp_msg['Subject'] = subject
+                smtp_msg['From'] = sender_email
+                smtp_msg['To'] = ', '.join(recipients)
+                
+                # HTML ve text body ekle
+                part1 = MIMEText(text_body, 'plain', 'utf-8')
+                part2 = MIMEText(html_body, 'html', 'utf-8')
+                smtp_msg.attach(part1)
+                smtp_msg.attach(part2)
+                
+                # SMTP bağlantısı
                 try:
-                    # Flask-Mail send metodunu çağır
-                    with current_app.app_context():
-                        mail.send(msg)
+                    server = smtplib.SMTP(mail_server, mail_port, timeout=10)
+                    server.set_debuglevel(0)  # Debug kapalı
+                    
+                    if mail_use_tls:
+                        server.starttls()
+                    
+                    server.login(mail_username, mail_password)
+                    server.send_message(smtp_msg)
+                    server.quit()
+                    
                     print(f"✅ Email başarıyla gönderildi: {user.email}, Kod: {code}")
                     return True
-                finally:
-                    # Timeout'u geri al
-                    socket.setdefaulttimeout(original_timeout)
+                    
+                except smtplib.SMTPException as smtp_error:
+                    print(f"❌ SMTP hatası: {str(smtp_error)}")
+                    import traceback
+                    traceback.print_exc()
+                    return False
+                except socket.error as socket_error:
+                    print(f"❌ Socket hatası: {str(socket_error)}")
+                    import traceback
+                    traceback.print_exc()
+                    return False
                 
                 
             except Exception as send_error:
