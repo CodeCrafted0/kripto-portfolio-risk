@@ -279,15 +279,18 @@ def resend_verification():
         flash('Email adresiniz zaten doğrulanmış. Giriş yapabilirsiniz.', 'success')
         return redirect(url_for('auth.login'))
     
-    # Email gönderimini yap
+    # Email gönderimini yap (SENKRON - test için)
+    print(f"📧 Resend verification: Email gönderme başlatılıyor - {email}")
     try:
         email_sent = EmailService.send_verification_email(user)
         if email_sent:
+            print(f"✅ Resend verification: Email başarıyla gönderildi - {email}")
             flash('Doğrulama kodu gönderildi. Lütfen email adresinizi kontrol edin.', 'success')
         else:
+            print(f"❌ Resend verification: Email gönderilemedi - {email}")
             flash('Kod gönderilemedi. Lütfen email ayarlarını kontrol edin veya daha sonra tekrar deneyin.', 'error')
     except Exception as e:
-        print(f"❌ Email gönderme hatası (resend): {str(e)}")
+        print(f"❌ Resend verification: Email gönderme exception - {email}: {str(e)}")
         import traceback
         traceback.print_exc()
         flash('Kod gönderilemedi. Lütfen daha sonra tekrar deneyin.', 'error')

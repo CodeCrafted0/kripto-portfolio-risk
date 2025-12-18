@@ -17,15 +17,17 @@ class EmailService:
     @staticmethod
     def send_verification_email(user):
         """Email doğrulama kodu gönder (6 haneli)"""
+        print(f"📧 EmailService.send_verification_email çağrıldı - {user.email}")
         try:
             # 6 haneli kod oluştur
             import random
             code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+            print(f"📧 Doğrulama kodu oluşturuldu: {code}")
+            
             user.email_verification_code = code
             user.email_verification_sent_at = datetime.utcnow()
             db.session.commit()
-            
-            print(f"Email doğrulama kodu oluşturuldu: {code} (Email: {user.email})")
+            print(f"✅ Kod veritabanına kaydedildi: {code} (Email: {user.email})")
             
             # Email oluştur
             subject = "Email Doğrulama Kodu - Kripto Portföy Risk Analiz"
