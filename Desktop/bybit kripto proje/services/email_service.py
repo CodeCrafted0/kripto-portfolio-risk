@@ -7,6 +7,8 @@ from flask_mail import Message
 import secrets
 from datetime import datetime, timedelta
 from models import db, User
+import socket
+import smtplib
 
 
 class EmailService:
@@ -133,17 +135,25 @@ class EmailService:
                 sender=sender_email
             )
             
-            # Email göndermeyi dene
+            # Email göndermeyi dene - timeout ile
             try:
                 print(f"📧 SMTP bağlantısı yapılıyor ve email gönderiliyor...")
                 print(f"   Email: {user.email}, Kod: {code}")
                 
-                # Flask-Mail send metodunu çağır
-                with current_app.app_context():
-                    mail.send(msg)
+                # Socket timeout ayarla (10 saniye)
+                original_timeout = socket.getdefaulttimeout()
+                socket.setdefaulttimeout(10)  # 10 saniye timeout
                 
-                print(f"✅ Email başarıyla gönderildi: {user.email}, Kod: {code}")
-                return True
+                try:
+                    # Flask-Mail send metodunu çağır
+                    with current_app.app_context():
+                        mail.send(msg)
+                    print(f"✅ Email başarıyla gönderildi: {user.email}, Kod: {code}")
+                    return True
+                finally:
+                    # Timeout'u geri al
+                    socket.setdefaulttimeout(original_timeout)
+                
                 
             except Exception as send_error:
                 error_msg = str(send_error)

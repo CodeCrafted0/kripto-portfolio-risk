@@ -50,6 +50,9 @@ app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', '')
 mail_username_env = os.getenv('MAIL_USERNAME', '')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', mail_username_env)
 
+# SMTP timeout ayarları (Render için)
+app.config['MAIL_TIMEOUT'] = 10  # 10 saniye timeout
+
 # Initialize extensions
 db.init_app(app)
 mail.init_app(app)
